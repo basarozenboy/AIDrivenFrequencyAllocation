@@ -1,0 +1,6 @@
+/.vs
+/AIDrivenFrequencyAllocation/bin
+/AIDrivenFrequencyAllocation/obj
+/FreqAllocationUI/bin/Debug/net8.0-windows
+/FreqAllocationUI/obj
+/FreqAllocationUI/FreqAllocationUI.csproj.user

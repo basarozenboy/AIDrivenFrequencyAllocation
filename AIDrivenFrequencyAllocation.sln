@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.13.36105.23
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AIDrivenFrequencyAllocation", "AIDrivenFrequencyAllocation\AIDrivenFrequencyAllocation.csproj", "{CDC1F29F-B874-4833-9EED-7841F3921304}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FreqAllocationUI", "FreqAllocationUI\FreqAllocationUI.csproj", "{F6B911BF-62AD-4308-A7AE-7A805B497C6E}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{CDC1F29F-B874-4833-9EED-7841F3921304}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CDC1F29F-B874-4833-9EED-7841F3921304}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CDC1F29F-B874-4833-9EED-7841F3921304}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CDC1F29F-B874-4833-9EED-7841F3921304}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F6B911BF-62AD-4308-A7AE-7A805B497C6E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F6B911BF-62AD-4308-A7AE-7A805B497C6E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F6B911BF-62AD-4308-A7AE-7A805B497C6E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F6B911BF-62AD-4308-A7AE-7A805B497C6E}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {21136F68-D83A-43F5-B2F1-75D92C478B2F}
+	EndGlobalSection
+EndGlobal
