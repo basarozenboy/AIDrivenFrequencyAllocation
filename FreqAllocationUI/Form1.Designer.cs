@@ -60,15 +60,15 @@
             var bandwidthLabel = new Label
             {
                 Text = "Band Genişliği (MHz):",
-                Location = new Point(10, 20),
-                Size = new Size(150, 25)
+                Location = new Point(10, 23),
+                Size = new Size(160, 25)
             };
 
             bandwidthTextBox = new TextBox
             {
                 Location = new Point(170, 20),
                 Size = new Size(100, 25),
-                Text = "20"
+                Text = "200"
             };
 
             allocateButton = new Button

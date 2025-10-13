@@ -58,9 +58,9 @@ namespace FreqAllocationUI
 
                 allocationListBox.Items.Add(info);
 
-                MessageBox.Show($"Tahsis baþarýlý!\nMerkez Frekansý: {allocation.CenterFrequency:F3} GHz\n" +
-                              $"Band Geniþliði: {allocation.Bandwidth * 1000:F1} MHz",
-                              "Baþarýlý", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                //MessageBox.Show($"Tahsis baþarýlý!\nMerkez Frekansý: {allocation.CenterFrequency:F3} GHz\n" +
+                //              $"Band Geniþliði: {allocation.Bandwidth * 1000:F1} MHz",
+                //              "Baþarýlý", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             else
             {
@@ -164,8 +164,8 @@ namespace FreqAllocationUI
             }
 
             // Baþlýk ve eksen etiketleri
-            g.DrawString("Frekans Spektrumu (GHz)", new Font("Arial", 12, FontStyle.Bold),
-                        Brushes.Black, width / 2 - 50, 2);
+            g.DrawString("Frekans Spektrumu (GHz)", new Font("Arial", 11, FontStyle.Bold),
+                        Brushes.Black, width / 2 - 50, -2);
 
             // Çerçeve
             using (var framePen = new Pen(Color.Black, 2))
