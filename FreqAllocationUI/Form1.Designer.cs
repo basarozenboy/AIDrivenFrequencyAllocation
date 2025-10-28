@@ -26,7 +26,7 @@
         ///  Required method for Designer support - do not modify
         ///  the contents of this method with the code editor.
         /// </summary>
-        private void InitializeComponent()
+        private void InitializeComponents()
         {
             Text = "Akıllı Frekans Tahsis Sistemi";
             Size = new Size(1200, 700);
@@ -75,17 +75,28 @@
             {
                 Text = "Frekans Tahsis Et",
                 Location = new Point(10, 60),
-                Size = new Size(260, 40),
+                Size = new Size(260, 35),
                 BackColor = Color.Green,
                 ForeColor = Color.White
             };
             allocateButton.Click += AllocateButton_Click;
 
+            batchAllocateButton = new Button
+            {
+                Text = "Toplu Frekans Tahsis Et",
+                Location = new Point(10, 97),
+                Size = new Size(260, 35),
+                BackColor = Color.Blue,
+                ForeColor = Color.White,
+                Font = new Font("Arial", 9, FontStyle.Bold)
+            };
+            batchAllocateButton.Click += BatchAllocateButton_Click;
+
             deallocateButton = new Button
             {
                 Text = "Seçili Tahsisi Kaldır",
-                Location = new Point(10, 110),
-                Size = new Size(260, 40),
+                Location = new Point(10, 135),
+                Size = new Size(260, 35),
                 BackColor = Color.Red,
                 ForeColor = Color.White
             };
@@ -94,14 +105,23 @@
             utilizationLabel = new Label
             {
                 Text = "Spektrum Kullanımı: 0%",
-                Location = new Point(10, 170),
+                Location = new Point(10, 185),
                 Size = new Size(260, 25),
                 Font = new Font("Arial", 10, FontStyle.Bold)
             };
 
+            var infoLabel = new Label
+            {
+                Text = "💡 Toplu tahsis için virgülle ayırarak birden fazla band genişliği girebilirsiniz.\nÖrn: 20,30,40,25,35,50",
+                Location = new Point(10, 210),
+                Size = new Size(460, 60),
+                Font = new Font("Arial", 8),
+                ForeColor = Color.Navy
+            };
+
             controlPanel.Controls.AddRange(new Control[] {
-                bandwidthLabel, bandwidthTextBox, allocateButton,
-                deallocateButton, utilizationLabel
+                bandwidthLabel, bandwidthTextBox, allocateButton, batchAllocateButton,
+                deallocateButton, utilizationLabel, infoLabel
             });
 
             // Status bar

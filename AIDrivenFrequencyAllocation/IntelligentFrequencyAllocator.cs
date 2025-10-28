@@ -23,6 +23,416 @@
             fragmentationHistory = new Dictionary<double, double>();
         }
 
+        // Toplu tahsis fonksiyonu - Particle Swarm Optimization (PSO) ile
+        public BatchAllocationResult AllocateBatch(List<FrequencyAllocationRequest> requests)
+        {
+            var result = new BatchAllocationResult
+            {
+                SuccessfulAllocations = new List<AllocatedBlock>(),
+                FailedRequests = new List<FrequencyAllocationRequest>()
+            };
+
+            if (requests == null || requests.Count == 0)
+                return result;
+
+            // Önce bandgenişliğine göre sırala (büyükten küçüğe - First Fit Decreasing)
+            var sortedRequests = requests.OrderByDescending(r => r.Bandwidth)
+                                        .ThenByDescending(r => r.Priority).ToList();
+
+            // Particle Swarm Optimization ile çözüm bul
+            var bestSolution = FindOptimalBatchAllocation(sortedRequests);
+
+            if (bestSolution != null)
+            {
+                // En iyi çözümü uygula
+                foreach (var allocation in bestSolution)
+                {
+                    allocatedBlocks.Add(allocation);
+                    result.SuccessfulAllocations.Add(allocation);
+                    UpdateFragmentationHistory(allocation.CenterFrequency);
+                }
+
+                // Başarısız talepleri belirle
+                var successIds = bestSolution.Select(a => a.AllocationId).ToHashSet();
+                result.FailedRequests = sortedRequests.Where(r => !successIds.Contains(r.RequestId)).ToList();
+
+                // Toplam fragmentasyon ve optimizasyon skoru
+                result.TotalFragmentation = CalculateTotalFragmentation();
+                result.OptimizationScore = CalculateBatchOptimizationScore(bestSolution);
+            }
+            else
+            {
+                result.FailedRequests = requests;
+            }
+
+            return result;
+        }
+
+        // PSO ile optimal toplu tahsis bulma
+        private List<AllocatedBlock> FindOptimalBatchAllocation(List<FrequencyAllocationRequest> requests)
+        {
+            int swarmSize = 30;
+            int maxIterations = 100;
+            var particles = new List<Particle>();
+
+            // Swarm'ı başlat
+            for (int i = 0; i < swarmSize; i++)
+            {
+                var particle = CreateRandomParticle(requests);
+                particles.Add(particle);
+            }
+
+            Particle globalBest = particles.OrderBy(p => p.Fitness).First();
+
+            // PSO iterasyonları
+            for (int iter = 0; iter < maxIterations; iter++)
+            {
+                foreach (var particle in particles)
+                {
+                    // Hız güncelleme
+                    UpdateParticleVelocity(particle, globalBest);
+
+                    // Pozisyon güncelleme
+                    UpdateParticlePosition(particle, requests);
+
+                    // Fitness hesapla
+                    particle.Fitness = CalculateParticleFitness(particle);
+
+                    // Personal best güncelle
+                    if (particle.Fitness < particle.PersonalBestFitness)
+                    {
+                        particle.PersonalBest = particle.Position.ToList();
+                        particle.PersonalBestFitness = particle.Fitness;
+                    }
+                }
+
+                // Global best güncelle
+                var currentBest = particles.OrderBy(p => p.Fitness).First();
+                if (currentBest.Fitness < globalBest.Fitness)
+                {
+                    globalBest = currentBest.Clone();
+                }
+
+                // Erken durdurma kriteri
+                if (globalBest.Fitness < 0.1)
+                    break;
+            }
+
+            return ConvertParticleToAllocations(globalBest, requests);
+        }
+
+        // Parçacık sınıfı
+        private class Particle
+        {
+            public List<double> Position { get; set; } // Her talep için merkez frekans
+            public List<double> Velocity { get; set; }
+            public List<double> PersonalBest { get; set; }
+            public double Fitness { get; set; }
+            public double PersonalBestFitness { get; set; }
+            public List<bool> ValidPositions { get; set; } // Geçerli pozisyonlar
+
+            public Particle Clone()
+            {
+                return new Particle
+                {
+                    Position = Position.ToList(),
+                    Velocity = Velocity.ToList(),
+                    PersonalBest = PersonalBest.ToList(),
+                    Fitness = Fitness,
+                    PersonalBestFitness = PersonalBestFitness,
+                    ValidPositions = ValidPositions.ToList()
+                };
+            }
+        }
+
+        // Rastgele parçacık oluştur
+        private Particle CreateRandomParticle(List<FrequencyAllocationRequest> requests)
+        {
+            var particle = new Particle
+            {
+                Position = new List<double>(),
+                Velocity = new List<double>(),
+                ValidPositions = new List<bool>()
+            };
+
+            var tempAllocations = new List<AllocatedBlock>();
+
+            foreach (var request in requests)
+            {
+                // Mevcut tahsisler + geçici tahsisler ile uyumlu pozisyon bul
+                var validRange = FindValidRangeForRequest(request.Bandwidth, tempAllocations);
+
+                if (validRange != null)
+                {
+                    double centerFreq = validRange.Item1 + (validRange.Item2 - validRange.Item1) * random.NextDouble();
+                    particle.Position.Add(centerFreq);
+                    particle.ValidPositions.Add(true);
+
+                    tempAllocations.Add(new AllocatedBlock
+                    {
+                        CenterFrequency = centerFreq,
+                        Bandwidth = request.Bandwidth,
+                        AllocationId = request.RequestId
+                    });
+                }
+                else
+                {
+                    particle.Position.Add(minFreq + (maxFreq - minFreq) * random.NextDouble());
+                    particle.ValidPositions.Add(false);
+                }
+
+                particle.Velocity.Add((random.NextDouble() - 0.5) * 0.1);
+            }
+
+            particle.PersonalBest = particle.Position.ToList();
+            particle.Fitness = CalculateParticleFitness(particle);
+            particle.PersonalBestFitness = particle.Fitness;
+
+            return particle;
+        }
+
+        // Geçerli aralık bulma
+        private Tuple<double, double> FindValidRangeForRequest(double bandwidth, List<AllocatedBlock> tempAllocations)
+        {
+            var allBlocks = allocatedBlocks.Concat(tempAllocations).OrderBy(b => b.StartFreq).ToList();
+
+            // İlk boşluk
+            if (allBlocks.Count == 0 || allBlocks[0].StartFreq - minFreq >= bandwidth + guardBand * 2)
+            {
+                double start = minFreq + bandwidth / 2;
+                double end = allBlocks.Count > 0 ? allBlocks[0].StartFreq - guardBand - bandwidth / 2 : maxFreq - bandwidth / 2;
+                if (end > start)
+                    return new Tuple<double, double>(start, end);
+            }
+
+            // Ara boşluklar
+            for (int i = 0; i < allBlocks.Count - 1; i++)
+            {
+                double gapStart = allBlocks[i].EndFreq + guardBand + bandwidth / 2;
+                double gapEnd = allBlocks[i + 1].StartFreq - guardBand - bandwidth / 2;
+
+                if (gapEnd > gapStart && gapEnd - gapStart >= 0)
+                {
+                    return new Tuple<double, double>(gapStart, gapEnd);
+                }
+            }
+
+            // Son boşluk
+            if (allBlocks.Count > 0)
+            {
+                double start = allBlocks.Last().EndFreq + guardBand + bandwidth / 2;
+                double end = maxFreq - bandwidth / 2;
+                if (end > start)
+                    return new Tuple<double, double>(start, end);
+            }
+
+            return null;
+        }
+
+        // Parçacık hızı güncelleme
+        private void UpdateParticleVelocity(Particle particle, Particle globalBest)
+        {
+            double w = 0.7; // Atalet ağırlığı
+            double c1 = 1.5; // Kişisel öğrenme faktörü
+            double c2 = 1.5; // Sosyal öğrenme faktörü
+
+            for (int i = 0; i < particle.Velocity.Count; i++)
+            {
+                double r1 = random.NextDouble();
+                double r2 = random.NextDouble();
+
+                particle.Velocity[i] = w * particle.Velocity[i] +
+                                      c1 * r1 * (particle.PersonalBest[i] - particle.Position[i]) +
+                                      c2 * r2 * (globalBest.Position[i] - particle.Position[i]);
+
+                // Hız sınırlama
+                particle.Velocity[i] = Math.Max(-0.5, Math.Min(0.5, particle.Velocity[i]));
+            }
+        }
+
+        // Parçacık pozisyonu güncelleme
+        private void UpdateParticlePosition(Particle particle, List<FrequencyAllocationRequest> requests)
+        {
+            var tempAllocations = new List<AllocatedBlock>();
+
+            for (int i = 0; i < particle.Position.Count; i++)
+            {
+                particle.Position[i] += particle.Velocity[i];
+
+                // Sınırları kontrol et
+                double halfBand = requests[i].Bandwidth / 2;
+                particle.Position[i] = Math.Max(minFreq + halfBand,
+                                      Math.Min(maxFreq - halfBand, particle.Position[i]));
+
+                // Geçerliliği kontrol et
+                var block = new AllocatedBlock
+                {
+                    CenterFrequency = particle.Position[i],
+                    Bandwidth = requests[i].Bandwidth,
+                    AllocationId = requests[i].RequestId
+                };
+
+                particle.ValidPositions[i] = IsValidAllocation(block, tempAllocations);
+
+                if (particle.ValidPositions[i])
+                {
+                    tempAllocations.Add(block);
+                }
+            }
+        }
+
+        // Tahsis geçerliliği kontrolü
+        private bool IsValidAllocation(AllocatedBlock newBlock, List<AllocatedBlock> tempAllocations)
+        {
+            var allBlocks = allocatedBlocks.Concat(tempAllocations);
+
+            foreach (var block in allBlocks)
+            {
+                if (!(newBlock.EndFreq + guardBand <= block.StartFreq ||
+                      newBlock.StartFreq - guardBand >= block.EndFreq))
+                {
+                    return false;
+                }
+            }
+
+            return newBlock.StartFreq >= minFreq && newBlock.EndFreq <= maxFreq;
+        }
+
+        // Parçacık fitness fonksiyonu
+        private double CalculateParticleFitness(Particle particle)
+        {
+            double fitness = 0;
+            int validCount = particle.ValidPositions.Count(v => v);
+
+            // Geçersiz pozisyon cezası
+            fitness += (particle.ValidPositions.Count - validCount) * 1000;
+
+            if (validCount == 0)
+                return fitness;
+
+            // Fragmentasyon cezası
+            var tempBlocks = new List<AllocatedBlock>();
+            for (int i = 0; i < particle.Position.Count; i++)
+            {
+                if (particle.ValidPositions[i])
+                {
+                    tempBlocks.Add(new AllocatedBlock
+                    {
+                        CenterFrequency = particle.Position[i],
+                        Bandwidth = 0.02, // Örnek değer
+                        AllocationId = i.ToString()
+                    });
+                }
+            }
+
+            fitness += CalculateBatchFragmentation(tempBlocks) * 100;
+
+            // Spektrum verimliliği (bitişik blokları tercih et)
+            tempBlocks = tempBlocks.OrderBy(b => b.CenterFrequency).ToList();
+            for (int i = 0; i < tempBlocks.Count - 1; i++)
+            {
+                double gap = tempBlocks[i + 1].StartFreq - tempBlocks[i].EndFreq;
+                if (gap > guardBand * 2 && gap < 0.05) // Küçük boşluk cezası
+                {
+                    fitness += gap * 500;
+                }
+            }
+
+            // Spektrum kullanım dengesi
+            double centerPoint = (minFreq + maxFreq) / 2;
+            double deviation = tempBlocks.Average(b => Math.Abs(b.CenterFrequency - centerPoint));
+            fitness += deviation * 10;
+
+            return fitness;
+        }
+
+        // Toplu fragmentasyon hesaplama
+        private double CalculateBatchFragmentation(List<AllocatedBlock> newBlocks)
+        {
+            var allBlocks = allocatedBlocks.Concat(newBlocks).OrderBy(b => b.StartFreq).ToList();
+            double fragmentation = 0;
+            double totalGaps = 0;
+            double usableGaps = 0;
+
+            for (int i = 0; i < allBlocks.Count - 1; i++)
+            {
+                double gap = allBlocks[i + 1].StartFreq - allBlocks[i].EndFreq - guardBand * 2;
+                if (gap > 0)
+                {
+                    totalGaps += gap;
+                    if (gap >= 0.01) // Minimum kullanılabilir boşluk
+                    {
+                        usableGaps += gap;
+                    }
+                }
+            }
+
+            if (totalGaps > 0)
+            {
+                fragmentation = 1 - (usableGaps / totalGaps);
+            }
+
+            return fragmentation;
+        }
+
+        // Parçacığı tahsislere dönüştür
+        private List<AllocatedBlock> ConvertParticleToAllocations(Particle particle, List<FrequencyAllocationRequest> requests)
+        {
+            var allocations = new List<AllocatedBlock>();
+
+            for (int i = 0; i < particle.Position.Count; i++)
+            {
+                if (particle.ValidPositions[i])
+                {
+                    allocations.Add(new AllocatedBlock
+                    {
+                        CenterFrequency = particle.Position[i],
+                        Bandwidth = requests[i].Bandwidth,
+                        AllocationId = requests[i].RequestId ?? Guid.NewGuid().ToString(),
+                        AllocationTime = DateTime.Now
+                    });
+                }
+            }
+
+            return allocations;
+        }
+
+        // Toplu optimizasyon skoru hesaplama
+        private double CalculateBatchOptimizationScore(List<AllocatedBlock> allocations)
+        {
+            if (allocations.Count == 0) return 0;
+
+            double score = 100;
+
+            // Fragmentasyon azaltma bonusu
+            double fragmentation = CalculateBatchFragmentation(allocations);
+            score -= fragmentation * 30;
+
+            // Spektrum verimliliği bonusu
+            double utilization = allocations.Sum(a => a.Bandwidth) / (maxFreq - minFreq);
+            score += utilization * 20;
+
+            // Bitişik yerleşim bonusu
+            var sorted = allocations.OrderBy(a => a.CenterFrequency).ToList();
+            int contiguousCount = 0;
+            for (int i = 0; i < sorted.Count - 1; i++)
+            {
+                if (Math.Abs(sorted[i].EndFreq - sorted[i + 1].StartFreq) < guardBand * 3)
+                {
+                    contiguousCount++;
+                }
+            }
+            score += (contiguousCount / (double)Math.Max(1, sorted.Count - 1)) * 30;
+
+            return Math.Max(0, Math.Min(100, score));
+        }
+
+        // Toplam fragmentasyon hesaplama
+        private double CalculateTotalFragmentation()
+        {
+            return CalculateBatchFragmentation(new List<AllocatedBlock>());
+        }
+
         // Ana tahsis fonksiyonu
         public AllocatedBlock AllocateFrequency(FrequencyAllocationRequest request)
         {
