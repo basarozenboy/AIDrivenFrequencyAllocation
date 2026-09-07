@@ -23,6 +23,9 @@
             fragmentationHistory = new Dictionary<double, double>();
         }
 
+        public double MinFrequency => minFreq;
+        public double MaxFrequency => maxFreq;
+
         // TOPLU TAHSİS - Frekansları birbirlerine maksimum uzaklıkta yerleştir
         public BatchAllocationResult AllocateBatch(List<FrequencyAllocationRequest> requests)
         {

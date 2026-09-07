@@ -1,0 +1,39 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v8.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v8.0": {
+      "AIDrivenFrequencyAllocation.Api/1.0.0": {
+        "dependencies": {
+          "AIDrivenFrequencyAllocation": "1.0.0"
+        },
+        "runtime": {
+          "AIDrivenFrequencyAllocation.Api.dll": {}
+        }
+      },
+      "AIDrivenFrequencyAllocation/1.0.0": {
+        "runtime": {
+          "AIDrivenFrequencyAllocation.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.0.0"
+          }
+        }
+      }
+    }
+  },
+  "libraries": {
+    "AIDrivenFrequencyAllocation.Api/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "AIDrivenFrequencyAllocation/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}
